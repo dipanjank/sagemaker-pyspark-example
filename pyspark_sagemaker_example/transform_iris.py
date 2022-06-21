@@ -16,7 +16,7 @@ def main():
     parser.add_argument("--input-path", type=str, help="local input path")
     parser.add_argument("--output-path", type=str, help="Local output path")
     args = parser.parse_args()
-    spark = SparkSession.builder.appName("PySparkApp").getOrCreate()
+    spark = SparkSession.builder.appName("TransformIris").getOrCreate()
     transform_file(spark, args.input_path, args.output_path)
 
 
