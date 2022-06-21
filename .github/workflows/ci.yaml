@@ -1,0 +1,21 @@
+name: Test
+on:
+  pull_request:
+  push:
+    branches:
+        - main
+
+jobs:
+  build-and-test:
+    name: Run test suite
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build Test Image
+      run: docker-compose build
+
+    - name: Run Tests
+      run: docker-compose run pyspark-sagemaker
