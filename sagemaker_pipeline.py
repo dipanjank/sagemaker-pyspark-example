@@ -1,26 +1,17 @@
 import argparse
+import json
 import logging
-import os
+from pprint import pformat
 
 import boto3
-import sagemaker
-from sagemaker.processing import ProcessingInput, ProcessingOutput
+from botocore.exceptions import WaiterError
+from sagemaker import Session
 from sagemaker.spark.processing import PySparkProcessor
 from sagemaker.workflow.pipeline import Pipeline
 from sagemaker.workflow.steps import ProcessingStep
 
-LOCAL_INPUT_PATH = "/opt/ml/processing/input"
-LOCAL_OUTPUT_PATH = "/opt/ml/processing/input/iris-summary"
 
-
-def build_pipeline(args: argparse.Namespace, sagemaker_session: sagemaker.session.Session):
-    input_ = ProcessingInput(
-        source=args.s3_input_prefix,
-        destination=LOCAL_INPUT_PATH,
-        input_name="iris-in",
-        s3_data_type="S3Prefix",
-        s3_input_mode="File",
-    )
+def build_pipeline(args: argparse.Namespace, sagemaker_session: Session):
 
     s3_event_log_uri = "s3://{}/{}/spark_event_logs".format(
         args.spark_event_log_bucket,
@@ -35,23 +26,13 @@ def build_pipeline(args: argparse.Namespace, sagemaker_session: sagemaker.sessio
         max_runtime_in_seconds=1200,
     )
 
-    output_ = ProcessingOutput(
-        source=LOCAL_OUTPUT_PATH,
-        destination=args.s3_output_prefix,
-        output_name="iris-grouped",
-        s3_upload_mode="EndOfJob",
-        app_managed=False,
-    )
-
     run_args = spark_processor.get_run_args(
         submit_app="./pyspark_sagemaker_example/transform_iris.py",
-        inputs=[input_],
-        outputs=[output_],
         arguments=[
             "--input-path",
-            os.path.join(LOCAL_INPUT_PATH, "iris.csv"),
+            args.s3_input_path,
             "--output-path",
-            LOCAL_OUTPUT_PATH,
+            args.s3_output_path,
         ],
         spark_event_logs_s3_uri=s3_event_log_uri,
     )
@@ -76,45 +57,44 @@ def get_parser():
     parser = argparse.ArgumentParser(
         description="Build and run SageMaker Pipeline.")
     parser.add_argument(
-        "--s3-input-prefix",
+        "--s3-input-path",
         type=str,
-        required=True,
+        default="s3a://dk-sagemaker-example-in/iris.csv",
+        required=False,
         help="Path to the IRIS CSV file on S3"
     )
     parser.add_argument(
         "--spark-event-log-bucket",
         type=str,
-        required=True,
+        default="dk-spark-event-logs",
+        required=False,
         help="The Spark Event Log Bucket"
     )
     parser.add_argument(
         "--spark-event-log-prefix",
+        default="spark-logs",
         type=str,
-        required=True,
+        required=False,
         help="The Spark Event Log Prefix"
     )
     parser.add_argument(
         "--sagemaker-role",
         type=str,
-        required=True,
+        default="arn:aws:iam::381665779871:role/service-role/AmazonSageMaker-ExecutionRole-20220310T143208",
+        required=False,
         help="SageMaker Execution Role"
     )
     parser.add_argument(
-        "--sagemaker-role",
+        "--s3-output-path",
         type=str,
-        required=True,
-        help="SageMaker Execution Role"
-    )
-    parser.add_argument(
-        "--s3-output-prefix",
-        type=str,
-        required=True,
+        default="s3a://dk-sagemaker-example-out/iris-grouped",
+        required=False,
         help="S3 Prefix for Parquet file output"
     )
     parser.add_argument(
         "--default-bucket",
         type=str,
-        default="default-sagemaker-bucket",
+        default="dk-default-sagemaker-bucket",
         required=False,
         help="Default SageMaker Bucket"
     )
@@ -131,15 +111,31 @@ def get_parser():
 def main():
     parser = get_parser()
     args = parser.parse_args()
-    sagemaker_session = sagemaker.session.Session(
+    sagemaker_session = Session(
         boto_session=boto3.Session(region_name=args.region_name),
         default_bucket=args.default_bucket,
     )
     pipeline = build_pipeline(args, sagemaker_session)
+    defn = pipeline.definition()
+    defn = json.loads(defn)
+    logging.info(f"Pipeline definition: {pformat(defn)}")
     logging.info("starting pipeline...")
-    exec_ = pipeline.start()
+    upsert_resp = pipeline.upsert(
+        args.sagemaker_role,
+        description="A SageMaker Pipeline to run Spark Processing Job",
+    )
+    logging.info(f"Upsert response: {pformat(upsert_resp)}")
+
+    start_resp = pipeline.start()
+
     logging.info("Waiting for pipeline to finish...")
-    exec_.wait(max_attempts=1)
+    try:
+        start_resp.wait()
+    except WaiterError:
+        steps = start_resp.list_steps()
+        logging.error("Pipeline execution failed.")
+        logging.error(f"Steps: {pformat(steps)}")
+        raise
     logging.info("Pipeline execution finished.")
 
 

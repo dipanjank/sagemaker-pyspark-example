@@ -15,6 +15,19 @@ pyspark-sagemaker-example
 
 
 
+How to Run Spark History Server
+===============================
+
+    $ cd spark-history-server
+    $ docker build -t sparkui .
+    $ SPARK_EVENTLOG_DIR="s3a://dk-spark-event-logs/spark-logs/spark_event_logs"
+    $ docker run -itd -e SPARK_HISTORY_OPTS="$SPARK_HISTORY_OPTS \
+        -Dspark.history.fs.logDirectory=$SPARK_EVENTLOG_DIR \
+        -Dspark.hadoop.fs.s3a.access.key=$AWS_ACCESS_KEY_ID \
+        -Dspark.hadoop.fs.s3a.secret.key=$AWS_SECRET_ACCESS_KEY" \
+        -p 18080:18080 sparkui \
+        "/opt/spark/bin/spark-class org.apache.spark.deploy.history.HistoryServer"
+
 
 Running PysparkProcessor in SageMaker Pipelines example
 
