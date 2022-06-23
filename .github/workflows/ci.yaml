@@ -34,7 +34,7 @@ jobs:
     - name: Build Test Image
       run: docker-compose build
 
-    - name: Run Tests
+    - name: Deploy Pipeline
       run: docker-compose run pyspark-sagemaker python sagemaker_pipeline.py
       env:
           AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
