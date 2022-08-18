@@ -58,5 +58,5 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-    logging.info(f"Execution ID: {ExecutionVariables.PIPELINE_EXECUTION_ID}")
+    logging.info(f"Execution ID: {ExecutionVariables.PIPELINE_EXECUTION_ID.to_string()}")
     main()
