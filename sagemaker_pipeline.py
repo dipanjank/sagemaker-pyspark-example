@@ -10,7 +10,6 @@ from sagemaker.spark.processing import PySparkProcessor
 from sagemaker.workflow.pipeline import Pipeline
 from sagemaker.workflow.steps import ProcessingStep
 
-
 def build_pipeline(args: argparse.Namespace, sagemaker_session: Session):
 
     s3_event_log_uri = "s3://{}/{}/spark_event_logs".format(
@@ -34,7 +33,6 @@ def build_pipeline(args: argparse.Namespace, sagemaker_session: Session):
             "--output-path",
             args.s3_output_path,
         ],
-        spark_event_logs_s3_uri=s3_event_log_uri,
     )
 
     step_process = ProcessingStep(
