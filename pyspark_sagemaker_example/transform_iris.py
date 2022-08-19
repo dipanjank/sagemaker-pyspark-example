@@ -60,6 +60,6 @@ if __name__ == "__main__":
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     # logging.info(f"Execution ID: {ExecutionVariables.PIPELINE_EXECUTION_ID.to_string()}")
-    for name. value in os.environ.items():
+    for name, value in os.environ.items():
         logging.info(f"NAME: {name}, VALUE: {value}")
     main()
