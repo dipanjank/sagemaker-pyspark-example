@@ -61,5 +61,5 @@ if __name__ == "__main__":
     )
     # logging.info(f"Execution ID: {ExecutionVariables.PIPELINE_EXECUTION_ID.to_string()}")
     for name. value in os.environ.items():
-        logging.info("NAME: {name}, VALUE: {value}")
+        logging.info(f"NAME: {name}, VALUE: {value}")
     main()
